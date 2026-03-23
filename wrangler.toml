@@ -3,10 +3,6 @@ main = "src/index.js"
 compatibility_date = "2025-05-20"
 workers_dev = true
 
-kv_namespaces = [
-  { binding = "DATA_KV", id = "你的KV命名空间ID" }
-]
-
 [vars]
 IMG_PROXY = ""
 OPEN_TRANSLATE = "false"
@@ -26,8 +22,5 @@ INSERT_FOOT = "false"
 INSERT_AD = "false"
 STOCK_WATCH_LIST = "VOO,QQQ,SPY,GLD,TLT,SGOV,NVDA,TSLA,AAPL,MSFT,GOOGL,AMZN,META"
 
-# ⚠️ 敏感信息请使用 Cloudflare Dashboard 的 Secrets 设置，不要写在这里！
-# 需要设置的 Secrets:
-# - GEMINI_API_KEY（在 GitHub Secrets 中已配置）
-# - GITHUB_TOKEN（在 GitHub Secrets 中已配置）
-# - LOGIN_PASSWORD（你自己的网站登录密码）
+# KV 命名空间在 Cloudflare Dashboard 中绑定
+# Secrets 在 Cloudflare Dashboard 中设置
