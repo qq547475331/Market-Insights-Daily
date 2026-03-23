@@ -3,6 +3,12 @@ main = "src/index.js"
 compatibility_date = "2025-05-20"
 workers_dev = true
 
+# ⚠️ 把下面的 ID 替换成你真实的 KV 命名空间 ID
+# 在 Cloudflare Dashboard → Workers & Pages → KV 中查看
+kv_namespaces = [
+  { binding = "DATA_KV", id = "f763fce4bc36425b93ccabe50d9b65db" }
+]
+
 [vars]
 IMG_PROXY = ""
 OPEN_TRANSLATE = "false"
@@ -16,11 +22,14 @@ GITHUB_REPO_OWNER = "你的GitHub用户名"
 GITHUB_REPO_NAME = "你的仓库名"
 GITHUB_BRANCH = "main"
 LOGIN_USERNAME = "admin"
+LOGIN_USERNAME = ""
 DAILY_TITLE = "金融日报"
 DAILY_TITLE_MIN = "金融日报"
 INSERT_FOOT = "false"
 INSERT_AD = "false"
 STOCK_WATCH_LIST = "VOO,QQQ,SPY,GLD,TLT,SGOV,NVDA,TSLA,AAPL,MSFT,GOOGL,AMZN,META"
 
-# KV 命名空间在 Cloudflare Dashboard 中绑定
-# Secrets 在 Cloudflare Dashboard 中设置
+# Secrets 需要在 Cloudflare Dashboard 中配置，或者使用 wrangler secret put
+# GEMINI_API_KEY
+# GITHUB_TOKEN
+# LOGIN_PASSWORD
