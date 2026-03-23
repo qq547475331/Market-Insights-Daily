@@ -2,19 +2,14 @@ import { getRandomUserAgent, sleep, stripHtml, formatDateToChineseWithTime, esca
 
 const FinancialNewsDataSource = {
     type: 'financialNews',
-    fetch: async (env, foloCookie) => {
-        const filterDays = parseInt(env.FOLO_FILTER_DAYS || '3', 10);
-        return await this.fetchFromRss(env, filterDays);
-    },
-
-    fetchFromRss: async (env, filterDays) => {
+    fetch: async (env) => {
         const allItems = [];
         
+        // 使用更可靠的 RSS 源
         const rssFeeds = [
-            { url: 'https://www.jiemian.com/rss/news.xml', name: '界面新闻' },
-            { url: 'https://www.yicai.com/rss/', name: '第一财经' },
-            { url: 'https://www.ftchinese.com/rss/news', name: 'FT中文网' },
-            { url: 'https://www.caixin.com/rss/rss_finance.xml', name: '财新网' },
+            { url: 'https://feeds.bbci.co.uk/news/business/rss.xml', name: 'BBC Business' },
+            { url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml', name: 'NYT Business' },
+            { url: 'https://www.investing.com/rss/news.rss', name: 'Investing.com' },
         ];
 
         for (const feed of rssFeeds) {
@@ -39,32 +34,52 @@ const FinancialNewsDataSource = {
             } catch (error) {
                 console.error(`Error fetching ${feed.name}:`, error.message);
             }
-            await sleep(500);
+            await sleep(300);
         }
 
-        console.log(`Total financial news items: ${allItems.length}`);
+        console.log(`FinancialNewsDataSource: Fetched ${allItems.length} items`);
         return { version: "https://jsonfeed.org/version/1.1", title: "Financial News", items: allItems };
     },
 
     parseRssXml: (xmlText, sourceName) => {
         const items = [];
         try {
+            // 更健壮的 XML 解析
             const itemMatches = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
             
             for (const itemXml of itemMatches) {
                 const getText = (tag) => {
-                    const match = itemXml.match(new RegExp(`<${tag}[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/${tag}>`, 'i'));
-                    return match ? match[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '') : '';
+                    // 支持 CDATA 和普通文本
+                    const patterns = [
+                        new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, 'i'),
+                        new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'),
+                    ];
+                    
+                    for (const pattern of patterns) {
+                        const match = itemXml.match(pattern);
+                        if (match && match[1]) {
+                            return match[1].trim();
+                        }
+                    }
+                    return '';
                 };
 
                 const title = getText('title');
-                const link = getText('link');
+                let link = getText('link');
                 const description = getText('description');
                 const pubDate = getText('pubDate');
 
+                // 有些 RSS link 在 <guid> 或其他地方
+                if (!link) {
+                    const guidMatch = itemXml.match(/<guid[^>]*>(.*?)<\/guid>/i);
+                    if (guidMatch && guidMatch[1].startsWith('http')) {
+                        link = guidMatch[1].trim();
+                    }
+                }
+
                 if (title && link) {
                     items.push({
-                        id: link,
+                        id: link || `news-${Date.now()}-${Math.random()}`,
                         url: link,
                         title: title,
                         content_html: description || title,

@@ -6,19 +6,25 @@ const GeopoliticsDataSource = {
         const allItems = [];
         
         const feeds = [
-            { url: 'https://www.reutersagency.com/feed/?best-topics=world-news', name: '路透社国际' },
-            { url: 'http://feeds.bbci.co.uk/news/world/rss.xml', name: 'BBC World' },
+            { url: 'https://feeds.bbci.co.uk/news/world/rss.xml', name: 'BBC World' },
+            { url: 'https://rss.nytimes.com/services/xml/rss/nyt/World.xml', name: 'NYT World' },
         ];
 
-        const keywords = ['russia', 'ukraine', 'israel', 'iran', 'china', 'taiwan', 'war', 'conflict', 'military', 'sanction', 'oil', 'energy', '俄乌', '中东', '台海', '战争', '冲突'];
+        const keywords = ['russia', 'ukraine', 'israel', 'iran', 'china', 'taiwan', 'war', 'conflict', 'military', 'sanction', 'oil', 'energy', 'nuclear', 'missile', 'attack', 'invasion'];
 
         for (const feed of feeds) {
             try {
-                console.log(`Fetching: ${feed.name}`);
+                console.log(`Fetching geopolitics: ${feed.name}`);
                 const response = await fetch(feed.url, {
-                    headers: { 'User-Agent': getRandomUserAgent(), 'Accept': 'application/xml' }
+                    headers: { 
+                        'User-Agent': getRandomUserAgent(), 
+                        'Accept': 'application/rss+xml, application/xml, */*' 
+                    }
                 });
-                if (!response.ok) continue;
+                if (!response.ok) {
+                    console.log(`${feed.name} returned ${response.status}`);
+                    continue;
+                }
 
                 const text = await response.text();
                 const items = this.parseRss(text, feed.name);
@@ -33,10 +39,10 @@ const GeopoliticsDataSource = {
             } catch (error) {
                 console.error(`Error ${feed.name}:`, error.message);
             }
-            await sleep(500);
+            await sleep(300);
         }
 
-        console.log(`Total geopolitics items: ${allItems.length}`);
+        console.log(`GeopoliticsDataSource: Fetched ${allItems.length} items`);
         return { version: "https://jsonfeed.org/version/1.1", title: "Geopolitics", items: allItems };
     },
 
@@ -46,8 +52,15 @@ const GeopoliticsDataSource = {
         
         for (const itemXml of matches) {
             const get = (tag) => {
-                const m = itemXml.match(new RegExp(`<${tag}[^>]*>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/${tag}>`, 'i'));
-                return m ? m[1].trim().replace(/<!\[CDATA\[|\]\]>/g, '') : '';
+                const patterns = [
+                    new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>`, 'i'),
+                    new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i'),
+                ];
+                for (const p of patterns) {
+                    const m = itemXml.match(p);
+                    if (m && m[1]) return m[1].trim();
+                }
+                return '';
             };
 
             const title = get('title');
@@ -62,8 +75,7 @@ const GeopoliticsDataSource = {
                     title,
                     content_html: desc || title,
                     date_published: date ? new Date(date).toISOString() : new Date().toISOString(),
-                    authors: [{ name: source }],
-                    source,
+                    description: desc
                 });
             }
         }
