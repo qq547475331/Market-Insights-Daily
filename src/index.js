@@ -1,6 +1,6 @@
 // src/index.js
 import { handleWriteData } from './handlers/writeData.js';
-import { handleGetContent } from './handlers/getContent.js';
+import { handleGetContent, handleGetDailyReport } from './handlers/getContent.js';
 import { handleGetContentHtml } from './handlers/getContentHtml.js';
 import { handleGenAIContent, handleGenAIDailyAnalysis } from './handlers/genAIContent.js';
 import { handleGenAIDailyPage } from './handlers/genAIDailyPage.js';
@@ -41,12 +41,16 @@ export default {
             return await handleLogout(request, env);
         } else if (path === '/getContent' && request.method === 'GET') {
             return await handleGetContent(request, env);
+        } else if (path === '/getDailyReport' && request.method === 'GET') {
+            return await handleGetDailyReport(request, env);
         } else if (path.startsWith('/rss') && request.method === 'GET') {
             return await handleRss(request, env);
         } else if (path === '/writeRssData' && request.method === 'GET') {
             return await handleWriteRssData(request, env);
         } else if (path === '/generateRssContent' && request.method === 'GET') {
             return await handleGenerateRssContent(request, env);
+        } else if (path === '/writeData' && (request.method === 'POST' || request.method === 'GET')) {
+            return await handleWriteData(request, env);
         }
 
         const { authenticated, cookie: newCookie } = await isAuthenticated(request, env);
@@ -58,9 +62,7 @@ export default {
 
         let response;
         try {
-            if (path === '/writeData' && request.method === 'POST') {
-                response = await handleWriteData(request, env);
-            } else if (path === '/getContentHtml' && request.method === 'GET') {
+            if (path === '/getContentHtml' && request.method === 'GET') {
                 const dataCategories = Object.keys(dataSources).map(key => ({
                     id: key,
                     name: dataSources[key].name

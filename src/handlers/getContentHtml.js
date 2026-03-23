@@ -1,31 +1,42 @@
 // src/handlers/getContentHtml.js
-import { getISODate, escapeHtml, setFetchDate } from '../helpers.js';
+import { getISODate, formatDateToChinese, escapeHtml } from '../helpers.js';
 import { getFromKV } from '../kv.js';
-import { generateContentSelectionPageHtml } from '../htmlGenerators.js';
+import { dataSources } from '../dataFetchers.js';
+import { generateContentSelectionPageHtml } from './getContent.js';
 
 export async function handleGetContentHtml(request, env, dataCategories) {
     const url = new URL(request.url);
     const dateParam = url.searchParams.get('date');
     const dateStr = dateParam ? dateParam : getISODate();
-    setFetchDate(dateStr);
-    console.log(`Getting HTML content for date: ${dateStr}`);
+    console.log(`Getting content HTML for date: ${dateStr}`);
 
     try {
         const allData = {};
-        // Dynamically fetch data for each category based on dataCategories
-        for (const category of dataCategories) {
-            allData[category.id] = await getFromKV(env.DATA_KV, `${dateStr}-${category.id}`) || [];
+        const fetchPromises = [];
+        
+        for (const sourceType in dataSources) {
+            if (Object.hasOwnProperty.call(dataSources, sourceType)) {
+                fetchPromises.push(
+                    getFromKV(env.DATA_KV, `${dateStr}-${sourceType}`).then(data => {
+                        allData[sourceType] = data || [];
+                    })
+                );
+            }
         }
+        await Promise.allSettled(fetchPromises);
+
+        const totalItems = Object.values(allData).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
         
         const html = generateContentSelectionPageHtml(env, dateStr, allData, dataCategories);
-
-        return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-
+        
+        return new Response(html, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
     } catch (error) {
-        console.error("Error in /getContentHtml:", error);
-        // Ensure escapeHtml is used for error messages displayed in HTML
-        return new Response(`<h1>Error generating HTML content</h1><p>${escapeHtml(error.message)}</p><pre>${escapeHtml(error.stack)}</pre>`, {
-            status: 500, headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        console.error("Error in handleGetContentHtml:", error);
+        return new Response(`<h1>Error</h1><p>${escapeHtml(error.message)}</p>`, {
+            status: 500,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' }
         });
     }
 }
