@@ -12,7 +12,7 @@ IMG_PROXY = ""
 OPEN_TRANSLATE = "false"
 USE_MODEL_PLATFORM = "GEMINI"
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta"
-DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
 FOLO_COOKIE_KV_KEY = "folo_auth_cookie"
 FOLO_DATA_API = "https://api.follow.is/entries"
 FOLO_FILTER_DAYS = "3"
@@ -26,8 +26,8 @@ INSERT_FOOT = "false"
 INSERT_AD = "false"
 STOCK_WATCH_LIST = "VOO,QQQ,SPY,GLD,TLT,SGOV,NVDA,TSLA,AAPL,MSFT,GOOGL,AMZN,META"
 
-# ⚠️ 敏感信息请使用 wrangler secret put 命令设置，不要写在这里！
+# ⚠️ 敏感信息请使用 Cloudflare Dashboard 的 Secrets 设置，不要写在这里！
 # 需要设置的 Secrets:
-# - GEMINI_API_KEY
-# - GITHUB_TOKEN
-# - LOGIN_PASSWORD
+# - GEMINI_API_KEY（在 GitHub Secrets 中已配置）
+# - GITHUB_TOKEN（在 GitHub Secrets 中已配置）
+# - LOGIN_PASSWORD（你自己的网站登录密码）
