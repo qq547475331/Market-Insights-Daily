@@ -1,7 +1,7 @@
 // src/handlers/getContentHtml.js
 import { getISODate, formatDateToChinese, escapeHtml } from '../helpers.js';
 import { getFromKV } from '../kv.js';
-import { dataSources } from '../dataFetchers.js';
+import { dataSources, fetchAllData } from '../dataFetchers.js';
 import { generateContentSelectionPageHtml } from './getContent.js';
 
 export async function handleGetContentHtml(request, env, dataCategories) {
@@ -11,7 +11,7 @@ export async function handleGetContentHtml(request, env, dataCategories) {
     console.log(`Getting content HTML for date: ${dateStr}`);
 
     try {
-        const allData = {};
+        let allData = {};
         const fetchPromises = [];
         
         for (const sourceType in dataSources) {
@@ -26,6 +26,28 @@ export async function handleGetContentHtml(request, env, dataCategories) {
         await Promise.allSettled(fetchPromises);
 
         const totalItems = Object.values(allData).reduce((sum, arr) => sum + (Array.isArray(arr) ? arr.length : 0), 0);
+        
+        // 如果没有数据，自动抓取
+        if (totalItems === 0) {
+            console.log(`No data found for ${dateStr}, fetching automatically...`);
+            
+            try {
+                const freshData = await fetchAllData(env, null);
+                
+                // 保存到 KV
+                const { storeInKV } = await import('../kv.js');
+                for (const sourceType in freshData) {
+                    if (freshData[sourceType] && freshData[sourceType].length > 0) {
+                        await storeInKV(env.DATA_KV, `${dateStr}-${sourceType}`, freshData[sourceType]);
+                        allData[sourceType] = freshData[sourceType];
+                    }
+                }
+                
+                console.log(`Auto-fetched data for ${dateStr}`);
+            } catch (fetchError) {
+                console.error(`Auto-fetch failed:`, fetchError.message);
+            }
+        }
         
         const html = generateContentSelectionPageHtml(env, dateStr, allData, dataCategories);
         
