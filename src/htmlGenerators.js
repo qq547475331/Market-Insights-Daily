@@ -62,7 +62,7 @@ export function generateContentSelectionPageHtml(env, dateStr, allData, dataCate
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${formatDateToChinese(escapeHtml(dateStr))} ${env.FOLO_FILTER_DAYS}天内的数据</title>
+            <title>${formatDateToChinese(escapeHtml(dateStr))} ${env.FOLO_FILTER_DAYS}天内的金融数据</title>
             <style>
                 :root { --primary-color: #007bff; --light-gray: #f8f9fa; --medium-gray: #e9ecef; --dark-gray: #343a40; --line-height-normal: 1.4; --font-size-small: 0.9rem;}
                 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -112,8 +112,8 @@ export function generateContentSelectionPageHtml(env, dateStr, allData, dataCate
                     <input type="hidden" name="date" value="${escapeHtml(dateStr)}">
                     <div class="header-bar">
                         <button type="button" class="submit-button" onclick="confirmFetchAndWriteData(this)">抓取并写入今日数据</button>
-                        <h1>${formatDateToChinese(escapeHtml(dateStr))} ${env.FOLO_FILTER_DAYS}天内的数据</h1>
-                        <button type="submit" class="submit-button" onclick="return confirmGenerateAIContent(event)">从选中内容生成 AI 日报</button>
+                        <h1>${formatDateToChinese(escapeHtml(dateStr))} ${env.FOLO_FILTER_DAYS}天内的金融数据</h1>
+                        <button type="submit" class="submit-button" onclick="return confirmGenerateAIContent(event)">从选中内容生成金融日报</button>
                     </div>
                     <div class="cookie-setting-area" style="margin-bottom: 1rem; padding: 0.8rem; border: 1px solid var(--medium-gray); border-radius: 6px; background-color: #fefefe;">
                         <label for="foloCookie" style="font-weight: bold; margin-right: 0.5rem;">Folo Cookie:</label>
@@ -286,8 +286,7 @@ export function generateGenAiPageHtml(env, title, bodyContent, pageDate, isError
 
 
     let actionButtonHtml = '';
-    // Regenerate button for AI Content Summary page
-    if (title.includes('AI日报') && selectedItemsForAction && Array.isArray(selectedItemsForAction) && selectedItemsForAction.length > 0) {
+    if (title.includes('日报') && selectedItemsForAction && Array.isArray(selectedItemsForAction) && selectedItemsForAction.length > 0) {
         actionButtonHtml = `
             <form action="/genAIContent" method="POST" style="display: inline-block; margin-left: 0.5rem;">
                 <input type="hidden" name="date" value="${escapeHtml(pageDate)}">
@@ -295,50 +294,21 @@ export function generateGenAiPageHtml(env, title, bodyContent, pageDate, isError
                 <button type="submit" class="button-link regenerate-button">${isErrorPage ? '重试生成' : '重新生成'}</button>
             </form>`;
     }
-    // Regenerate button for AI Podcast Script page
-    else if (title.includes('AI播客') && selectedItemsForAction && Array.isArray(selectedItemsForAction) && selectedItemsForAction.length > 0) {
-        actionButtonHtml = `
-            <form action="/genAIPodcastScript" method="POST" style="display: inline-block; margin-left: 0.5rem;">
-                <input type="hidden" name="date" value="${escapeHtml(pageDate)}">
-                ${selectedItemsForAction.map(item => `<input type="hidden" name="selectedItems" value="${escapeHtml(item)}">`).join('')}
-                <input type="hidden" name="summarizedContent" value="${escapeHtml(convertEnglishQuotesToChinese(dailyMd))}">
-                <button type="submit" class="button-link regenerate-button">${isErrorPage ? '重试生成' : '重新生成'}</button>
-            </form>
-        `;
-    } 
 
     let githubSaveFormHtml = '';
-    let generatePodcastButtonHtml = ''; 
     let aiDailyAnalysisButtonHtml = '';
     let outDisplayButtonHtml = '';
 
-    // Since commitToGitHub and genAIPodcastScript are now API calls,
-    // these forms should be handled by JavaScript on the client side.
-    // We will provide the data as hidden inputs for potential client-side use,
-    // but the submission will be via JS fetch, not direct form POST.
     if (!isErrorPage) {
-        if (title === 'AI日报' && promptsMd && dailyMd) {
+        if ((title === '日报' || title === '金融日报') && promptsMd && dailyMd) {
             githubSaveFormHtml = `
                 <input type="hidden" id="promptsMdCall1" value="${escapeHtml(promptsMd)}">
                 <input type="hidden" id="dailyMd" value="${escapeHtml(dailyMd)}">
                 <button type="button" class="button-link github-save-button" onclick="commitToGitHub('${pageDate}', 'daily')">保存日报到 GitHub</button>`;
-        } else if (title === 'AI播客脚本' && promptsMd && podcastMd) {
-            githubSaveFormHtml = `
-                <input type="hidden" id="promptsMdCall2" value="${escapeHtml(promptsMd)}">
-                <input type="hidden" id="podcastMd" value="${escapeHtml(podcastMd)}">
-                <button type="button" class="button-link github-save-button" onclick="commitToGitHub('${pageDate}', 'podcast')">保存播客到 GitHub</button>`;
         }
     }
 
-    if (title === 'AI日报' && !isErrorPage && podcastMd === null) { // podcastMd === null indicates it's the Call 1 page
-        generatePodcastButtonHtml = `
-            <form action="/genAIPodcastScript" method="POST" style="display: inline-block; margin-left: 0.5rem;">
-                <input type="hidden" name="date" value="${escapeHtml(pageDate)}">
-                <input type="hidden" name="readGithub" value="${readGithub}">
-                ${selectedItemsForAction.map(item => `<input type="hidden" name="selectedItems" value="${escapeHtml(item)}">`).join('')}
-                <input type="hidden" name="summarizedContent" value="${escapeHtml(convertEnglishQuotesToChinese(bodyContent))}">
-                <button type="submit" class="button-link">生成播客脚本</button>
-            </form>`;
+    if ((title === '日报' || title === '金融日报') && !isErrorPage) {
         aiDailyAnalysisButtonHtml = `
             <input type="hidden" id="summarizedContentInput" value="${escapeHtml(convertEnglishQuotesToChinese(bodyContent))}">
             <button type="button" class="button-link" onclick="generateAIDailyAnalysis('${escapeHtml(pageDate)}')">AI 日报分析</button>
@@ -349,20 +319,12 @@ export function generateGenAiPageHtml(env, title, bodyContent, pageDate, isError
     }
 
     let promptDisplayHtml = '';
-    if (title === 'AI日报' || title.includes('生成AI日报出错(')) {
+    if (title.includes('日报') || title.includes('生成日报出错(')) {
         if (systemP1 || userP1) {
             promptDisplayHtml = `
                 <div style="margin-top: 1.5rem;">
                     <h2 style="font-size:1.3rem; margin-bottom:0.5rem;">API 调用详情</h2>
                     ${generatePromptSectionHtmlForGenAI(convertEnglishQuotesToChinese(systemP1), convertEnglishQuotesToChinese(userP1), '调用 1: 日报', 'call1')}
-                </div>`;
-        }
-    } else if (title === 'AI播客脚本') {
-        if (systemP2 || userP2) {
-            promptDisplayHtml = `
-                <div style="margin-top: 1.5rem;">
-                    <h2 style="font-size:1.3rem; margin-bottom:0.5rem;">API 调用详情</h2>
-                    ${generatePromptSectionHtmlForGenAI(convertEnglishQuotesToChinese(systemP2), convertEnglishQuotesToChinese(userP2), '调用 2: 播客格式化', 'call2')}
                 </div>`;
         }
     }
