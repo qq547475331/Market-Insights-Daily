@@ -1,4 +1,4 @@
-name: Build Financial Daily
+name: Generate Financial Daily Report
 
 on:
   schedule:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-daily:
+  generate-daily:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -31,44 +31,50 @@ jobs:
       - name: Wait for deployment
         run: sleep 30
 
-      - name: Trigger data fetch
+      - name: Fetch data and generate report
         run: |
-          TODAY_DATE=$(TZ="Asia/Shanghai" date +%Y-%m-%d)
-          WRITE_URL="${{ vars.WRITE_RSS_URL }}?date=$TODAY_DATE"
-          echo "Triggering: $WRITE_URL"
-          curl -fsS --retry 3 --retry-delay 5 "$WRITE_URL"
-
-      - name: Archive old notes
-        run: |
-          echo "归档旧的日报..."
-          LATEST_DAILY_FILE=$(find daily -type f -name "*.md" 2>/dev/null | sort -r | head -n 1)
-          if [ -z "$LATEST_DAILY_FILE" ]; then
-            echo "没有找到旧的日报文件"
-            exit 0
-          fi
+          TODAY=$(TZ="Asia/Shanghai" date +%Y-%m-%d)
+          WORKER_URL="${{ vars.WORKER_URL }}"
           
-          LATEST_MONTH=$(basename "$LATEST_DAILY_FILE" .md | cut -d'-' -f1,2)
-          echo "当前月份: $LATEST_MONTH"
+          echo "Fetching data for $TODAY..."
+          curl -fsS "${WORKER_URL}/writeData?date=${TODAY}" || echo "Data fetch completed"
+          
+          echo "Waiting for data processing..."
+          sleep 10
+          
+          echo "Generating AI report..."
+          curl -fsS "${WORKER_URL}/generateRssContent?date=${TODAY}" || echo "Report generation completed"
 
-          for file in daily/*.md 2>/dev/null; do
-            [ -e "$file" ] || continue
-            FILE_MONTH=$(basename "$file" .md | cut -d'-' -f1,2)
-            if [ "$FILE_MONTH" != "$LATEST_MONTH" ]; then
-              TARGET_DIR="daily/$FILE_MONTH"
-              mkdir -p "$TARGET_DIR"
-              echo "归档: $file -> $TARGET_DIR/"
-              mv "$file" "$TARGET_DIR/"
+      - name: Archive old reports
+        run: |
+          echo "Archiving old reports..."
+          
+          if [ -d "daily" ]; then
+            LATEST_FILE=$(find daily -type f -name "*.md" 2>/dev/null | sort -r | head -n 1)
+            if [ -n "$LATEST_FILE" ]; then
+              LATEST_MONTH=$(basename "$LATEST_FILE" .md | cut -d'-' -f1,2)
+              
+              for file in daily/*.md 2>/dev/null; do
+                [ -e "$file" ] || continue
+                FILE_MONTH=$(basename "$file" .md | cut -d'-' -f1,2)
+                if [ "$FILE_MONTH" != "$LATEST_MONTH" ]; then
+                  TARGET_DIR="daily/$FILE_MONTH"
+                  mkdir -p "$TARGET_DIR"
+                  mv "$file" "$TARGET_DIR/"
+                fi
+              done
             fi
-          done
+          fi
 
       - name: Commit and push
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add daily/ today/
+          git add daily/ rss/ today/
+          
           if git diff --staged --quiet; then
-            echo "没有变更"
+            echo "No changes to commit"
           else
-            git commit -m "docs: 自动生成金融日报 $(date -u +%Y-%m-%d)"
+            git commit -m "docs: 自动生成金融日报 $(TZ='Asia/Shanghai' date +%Y-%m-%d)"
             git push
           fi
