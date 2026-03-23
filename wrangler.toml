@@ -1,4 +1,4 @@
-name = "financial-daily"
+name = "market-insights-daily"
 main = "src/index.js"
 compatibility_date = "2025-05-20"
 workers_dev = true
